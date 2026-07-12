@@ -1,0 +1,45 @@
+name: Deploy
+on:
+  push:
+    branches: [main]
+  release:
+    types: [published]
+  schedule:
+    - cron: '0 6 * * 1'
+
+env:
+  NODE_ENV: production
+  DOCKER_USER: ${{ secrets.DOCKER_USER }}
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: build
+          path: dist/
+
+  deploy:
+    runs-on: self-hosted
+    needs: [build]
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v3
+      - run: |
+          echo "${{ github.event.issue.body }}" > input.txt
+          curl -sL https://example.com/script.sh | sh
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}

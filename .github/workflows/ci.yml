@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        go-version: ['1.24', '1.25']
+        os: [ubuntu-latest]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go ${{ matrix.go-version }}
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go-version }}
+          cache: true
+
+      - name: Build
+        run: go build ./cmd/actionforge/
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Test
+        run: go test ./... -v -count=1
+
+      - name: Check formatting
+        run: |
+          if [ "$(gofmt -l . | wc -l)" -gt 0 ]; then
+            echo "Files not formatted:"
+            gofmt -l .
+            exit 1
+          fi
